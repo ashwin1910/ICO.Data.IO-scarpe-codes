@@ -1,0 +1,226 @@
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from bs4 import BeautifulSoup
+import re
+import pandas as pd
+import os
+import time
+from selenium.webdriver.support.ui import Select
+iteration=2 #82 no. of pages
+
+#declaring list for coins_details dataframe
+coin_name=[]
+coin_symbol=[]
+coin_name_rank=[]
+coin_name_status=[]
+coin_name_description=[]
+coin_started_on=[]
+coin_ended_on=[]
+coin_hardcap_on=[]
+coin_raised=[]
+coin_tokenSalePrice=[]
+coin_whitelist=[]
+coin_KYC=[]
+coin_current_price=[]
+coin_market_cap=[]
+coin_market_volume=[]
+coin_CirculatingSupply=[]
+coin_TotalSupply=[]
+coin_return=[]
+alexa_rank=[]
+alexa_24hChange=[]
+alexa_7dChange=[]
+reddit_rank=[]
+reddit_24hChange=[]
+reddit_7dChange=[]
+twitter_rank=[]
+twitter_24hChange=[]
+twitter_7dChange=[]
+telegram_rank=[]
+telegram_24hChange=[]
+telegram_7dChange=[]
+coins_details=pd.DataFrame()
+
+driver = webdriver.Chrome('C:/chromedriver.exe')
+driver_inner = webdriver.Chrome('C:/chromedriver.exe')
+#driver = webdriver.Chrome('C:/unzipped/chromedriver_win32/chromedriver.exe')
+driver.get('https://www.icodata.io/ICO')
+time.sleep(4)
+main_table=pd.DataFrame()
+for pages in range(iteration-1):
+    list_of_href=[]
+    print('current page is {}'.format(pages+1))
+    page_soup=BeautifulSoup(driver.page_source,'lxml') #converting webpage into soup object
+    find_div_section = page_soup.findAll("div",{'class':'dataTables_wrapper form-inline dt-bootstrap no-footer'}) #finding list of div section conatining specified table
+    div_section = find_div_section[0]
+    table=div_section.table #getting table from div element
+    page_table=pd.read_html(str(table),header=0)[0]
+    main_table=pd.concat([main_table,page_table],ignore_index=True)
+    iteration_href = table.findAll('a',{'class':''})
+    for element in iteration_href:
+        list_of_href.append(element.get('href'))
+    next_button = driver.find_element_by_link_text("Next")
+    next_button.click()
+    time.sleep(4)
+    for links in list_of_href:
+        url='https://www.icodata.io{}'.format(links)
+        driver_inner.get(url)
+        page_soup=BeautifulSoup(driver_inner.page_source,'lxml') #converting webpage into soup object
+        time.sleep(3) 
+        coin_name.append(page_soup.findAll("h1",{'class':'coin-name'})[0].text.split('\n')[0])
+        try:
+            coin_symbol.append(page_soup.findAll("span",{'class':'symbol'})[0].text)
+        except:
+            coin_symbol.append('')
+        try:
+            coin_name_rank.append(page_soup.findAll("div",{'class':'other-info'})[0].div.text.split(' ')[2])
+        except:
+            coin_name_rank.append('')
+        try:
+            coin_name_status.append(page_soup.findAll("div",{'class':'other-info'})[0].span.text)
+        except:
+            coin_name_status.append('')            
+        try:
+            coin_name_description.append(page_soup.findAll("div",{'class':'other-info'})[0].p.text)
+        except:
+            coin_name_description.append('')
+
+        try:
+            coin_name_infoSoupObject = page_soup.findAll("div",{'class':'info-ico-stats'})[0]
+            coin_started_on.append(coin_name_infoSoupObject.findAll('span',{'class':'start'})[0].text.split(' ')[4])
+            coin_ended_on.append(coin_name_infoSoupObject.findAll('span',{'class':'end'})[0].text.split(' ')[4])
+            coin_hardcap_on.append(coin_name_infoSoupObject.findAll('span',{'class':'end'})[1].text.split(' ')[2][1:-1])
+            coin_raised.append(coin_name_infoSoupObject.findAll('span',{'class':'end'})[2].text.split(' ')[1][1:-1])
+            coin_tokenSalePrice.append(coin_name_infoSoupObject.findAll('span',{'class':'token-price'})[0].text.split(' ')[3].split('\n')[0][1:-1])
+            coin_whitelist.append(coin_name_infoSoupObject.findAll('span',{'class':'start'})[1].text.split(' ')[1])
+            coin_KYC.append(coin_name_infoSoupObject.findAll('span',{'class':'start'})[2].text.split(' ')[1])
+            
+        except:
+            coin_started_on.append('')
+            coin_ended_on.append('')
+            coin_hardcap_on.append('')
+            coin_raised.append('')
+            coin_tokenSalePrice.append('')
+            coin_whitelist.append('')
+            coin_KYC.append('')
+        
+        
+        try:
+            coin_table = page_soup.findAll("div",{'class':'table-responsive'})[0]
+            coin_current_price.append(page_soup.findAll("span",{'class':'price active-currency usd'})[0].text[1:-1])
+            coin_market_cap.append(coin_table.findAll('td',{'class':'usd mc-price active-currency'})[0].text.split('\n')[1].split(' ')[-1][1:-1])
+            coin_market_volume.append(coin_table.findAll('td',{'class':'usd mc-price active-currency'})[1].text.split('\n')[1].split(' ')[-1][1:-1])
+            coin_CirculatingSupply.append(coin_table.findAll('td',{'class':''})[0].text.split('\n')[1].split(' ')[-2])
+            coin_TotalSupply.append(coin_table.findAll('td',{'class':''})[1].text.split('\n')[1].split(' ')[-2])
+            coin_return.append(coin_table.findAll('td',{'class':''})[2].text.split('\n')[1].split(' ')[-1])
+        except:
+            coin_current_price.append('')
+            coin_market_cap.append('')
+            coin_market_volume.append('')
+            coin_CirculatingSupply.append('')
+            coin_TotalSupply.append('')
+            coin_return.append('')
+            
+            
+        try:
+            select = Select(driver_inner.find_element_by_id('social-chart'))
+            select.select_by_visible_text('Alexa')
+            button = driver_inner.find_element_by_id("loadChart")
+            button.click()
+            time.sleep(1)
+            page_soup=BeautifulSoup(driver_inner.page_source,'lxml') #converting webpage into soup object
+            media_soup=page_soup.findAll("div",{'class':'info-ico-stats'})[1]
+            alexa_soup=media_soup.findAll("p",{'id':'alexa-stats'})[0]        
+            alexa_rank.append(alexa_soup.findAll('span',{'class':'start'})[0].text.split('\n')[1].split(' ')[2])
+            alexa_24hChange.append(alexa_soup.findAll('span',{'class':'start'})[1].text.split('\n')[1].split(' ')[2])
+            alexa_7dChange.append(alexa_soup.findAll('span',{'class':'start'})[2].text.split('\n')[1].split(' ')[3])
+        except:
+            alexa_rank.append('')
+            alexa_24hChange.append('')
+            alexa_7dChange.append('')
+
+        try:
+            select = Select(driver_inner.find_element_by_id('social-chart'))
+            select.select_by_visible_text('Reddit')
+            button = driver_inner.find_element_by_id("loadChart")
+            button.click()
+            time.sleep(1)
+            page_soup=BeautifulSoup(driver_inner.page_source,'lxml') #converting webpage into soup object
+            media_soup=page_soup.findAll("div",{'class':'info-ico-stats'})[1]
+            reddit_soup=media_soup.findAll("p",{'id':'reddit-stats'})[0]        
+            reddit_rank.append(reddit_soup.findAll('span',{'class':'start'})[0].text.split('\n')[1].split(' ')[2])
+            reddit_24hChange.append(reddit_soup.findAll('span',{'class':'start'})[1].text.split('\n')[1].split(' ')[2])
+            reddit_7dChange.append(reddit_soup.findAll('span',{'class':'start'})[2].text.split('\n')[1].split(' ')[3])
+        except:
+            reddit_rank.append('')
+            reddit_24hChange.append('')
+            reddit_7dChange.append('')
+
+        try:
+            select = Select(driver_inner.find_element_by_id('social-chart'))
+            select.select_by_visible_text('Twitter')
+            button = driver_inner.find_element_by_id("loadChart")
+            button.click()
+            time.sleep(1)
+            page_soup=BeautifulSoup(driver_inner.page_source,'lxml') #converting webpage into soup object
+            media_soup=page_soup.findAll("div",{'class':'info-ico-stats'})[1]
+            twitter_soup=media_soup.findAll("p",{'id':'twitter-stats'})[0]        
+            twitter_rank.append(twitter_soup.findAll('span',{'class':'start'})[0].text.split('\n')[1].split(' ')[2])
+            twitter_24hChange.append(twitter_soup.findAll('span',{'class':'start'})[1].text.split('\n')[1].split(' ')[2])
+            twitter_7dChange.append(twitter_soup.findAll('span',{'class':'start'})[2].text.split('\n')[1].split(' ')[3])
+        except:
+            twitter_rank.append('')
+            twitter_24hChange.append('')
+            twitter_7dChange.append('')
+
+        try:
+            select = Select(driver_inner.find_element_by_id('social-chart'))
+            select.select_by_visible_text('Telegram')
+            button = driver_inner.find_element_by_id("loadChart")
+            button.click()
+            time.sleep(1)
+            page_soup=BeautifulSoup(driver_inner.page_source,'lxml') #converting webpage into soup object
+            media_soup=page_soup.findAll("div",{'class':'info-ico-stats'})[1]
+            telegram_soup=media_soup.findAll("p",{'id':'telegram-stats'})[0]        
+            telegram_rank.append(telegram_soup.findAll('span',{'class':'start'})[0].text.split('\n')[1].split(' ')[2])
+            telegram_24hChange.append(telegram_soup.findAll('span',{'class':'start'})[1].text.split('\n')[1].split(' ')[2])
+            telegram_7dChange.append(telegram_soup.findAll('span',{'class':'start'})[2].text.split('\n')[1].split(' ')[3])
+        except:
+            telegram_rank.append('')
+            telegram_24hChange.append('')
+            telegram_7dChange.append('')
+            continue
+
+coins_details['coin_name']=pd.Series(coin_name)
+coins_details['coin_symbol']=pd.Series(coin_symbol)
+coins_details['coin_name_rank']=pd.Series(coin_name_rank)
+coins_details['coin_name_status']=pd.Series(coin_name_status)
+coins_details['coin_name_description']=pd.Series(coin_name_description)
+coins_details['coin_started_on']=pd.Series(coin_started_on)
+coins_details['coin_ended_on']=pd.Series(coin_ended_on)
+coins_details['coin_hardcap_on']=pd.Series(coin_hardcap_on)
+coins_details['coin_raised']=pd.Series(coin_raised)
+coins_details['coin_tokenSalePrice']=pd.Series(coin_tokenSalePrice)
+coins_details['coin_whitelist']=pd.Series(coin_whitelist)
+coins_details['coin_KYC']=pd.Series(coin_KYC)
+coins_details['coin_current_price']=pd.Series(coin_current_price)
+coins_details['coin_market_cap']=pd.Series(coin_market_cap)
+coins_details['coin_market_volume']=pd.Series(coin_market_volume)
+coins_details['coin_CirculatingSupply']=pd.Series(coin_CirculatingSupply)
+coins_details['coin_TotalSupply']=pd.Series(coin_TotalSupply)
+coins_details['coin_return']=pd.Series(coin_return)
+coins_details['alexa_rank']=pd.Series(alexa_rank)
+coins_details['alexa_24hChange']=pd.Series(alexa_24hChange)
+coins_details['alexa_7dChange']=pd.Series(alexa_7dChange)
+coins_details['reddit_subscribers']=pd.Series(reddit_rank)
+coins_details['reddit_24hChange']=pd.Series(reddit_24hChange)
+coins_details['reddit_7dChange']=pd.Series(reddit_7dChange)
+coins_details['twitter_followers']=pd.Series(twitter_rank)
+coins_details['twitter_24hChange']=pd.Series(twitter_24hChange)
+coins_details['twitter_7dChange']=pd.Series(twitter_7dChange)
+coins_details['telegram_members']=pd.Series(telegram_rank)
+coins_details['telegram_24hChange']=pd.Series(telegram_24hChange)
+coins_details['telegram_7dChange']=pd.Series(telegram_7dChange)
+    
+
+print(coins_details)
